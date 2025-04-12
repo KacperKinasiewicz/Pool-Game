@@ -1,12 +1,19 @@
-﻿using System.Configuration;
-using System.Data;
-using System.Windows;
+﻿using System.Windows;
+using ViewModel;
 
 namespace View;
-
-/// <summary>
-/// Interaction logic for App.xaml
-/// </summary>
 public partial class App : Application
 {
+    private void OnStartup(object sender, StartupEventArgs e)
+    {
+        ViewModelClass viewModel = new ViewModelClass(10);
+        viewModel.StartSimulation();
+        
+        MainWindow mainWindow = new MainWindow
+        {
+            DataContext = viewModel.ModelClass.Table
+        };
+        
+        mainWindow.Show();
+    }
 }
