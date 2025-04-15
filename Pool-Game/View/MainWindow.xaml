@@ -16,7 +16,7 @@
         <Canvas Name="GameCanvas" Width="800" Height="600">
             <Rectangle Width="810" Height="610" Stroke="Brown" StrokeThickness="10" Fill="Green"/>
             
-            <ItemsControl ItemsSource="{Binding Balls}">
+            <ItemsControl ItemsSource="{Binding ModelClass.Table.Balls}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <Canvas/>
@@ -36,10 +36,13 @@
             </ItemsControl>
         </Canvas>
         
-        <Slider Grid.Row="1"
-                Minimum="1"
-                Maximum="20"
-                Value="{Binding BallCount}"
-                Margin="10"/>
+        <StackPanel Grid.Row="1" Margin="10">
+            <TextBlock Text="Zmień liczbę kulek na stole:" 
+                       FontSize="16" 
+                       Margin="0,0,0,5"/>
+            <Slider Minimum="1"
+                    Maximum="20"
+                    Value="{Binding BallCount}"/>
+        </StackPanel>
     </Grid>
 </Window>

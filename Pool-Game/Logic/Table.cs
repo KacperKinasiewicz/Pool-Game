@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Data;
 
 namespace Logic
@@ -10,8 +10,8 @@ namespace Logic
         public double Height { get; }
         
         private readonly Random _random = new Random();
-        private readonly List<IBall> _balls = new List<IBall>();
-        public IReadOnlyList<IBall> Balls => _balls.AsReadOnly();
+        private readonly ObservableCollection<IBall> _balls = new ObservableCollection<IBall>();
+        public ObservableCollection<IBall> Balls => _balls;
         public Table(double width, double height)
         {
             Width = width;
@@ -25,8 +25,8 @@ namespace Logic
 
             for (int i = 0; i < count; i++)
             {
-                double x = _random.NextDouble() * (Width - 2 * radius) + radius;
-                double y = _random.NextDouble() * (Height - 2 * radius) + radius;
+                double x = _random.NextDouble() * (Width - 2 * radius);
+                double y = _random.NextDouble() * (Height - 2 * radius);
                 double velocityX = (_random.NextDouble() - 0.5) * 5;
                 double velocityY = (_random.NextDouble() - 0.5) * 5;
                 

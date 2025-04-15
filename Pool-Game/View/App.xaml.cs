@@ -11,7 +11,7 @@ public partial class App : Application
         
         MainWindow mainWindow = new MainWindow
         {
-            DataContext = viewModel.ModelClass.Table
+            DataContext = viewModel
         };
         
         mainWindow.Show();

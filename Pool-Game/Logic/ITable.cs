@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.ObjectModel;
 using Data;
 
 namespace Logic
@@ -7,7 +7,7 @@ namespace Logic
     {
         double Width { get; }
         double Height { get; }
-        IReadOnlyList<IBall> Balls { get; }
+        ObservableCollection<IBall> Balls { get; }
 
         void InitializeBalls(int count);
         void UpdateBalls();

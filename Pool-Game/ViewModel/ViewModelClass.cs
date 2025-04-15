@@ -30,6 +30,7 @@ namespace ViewModel
                 {
                     _ballCount = value;
                     OnPropertyChanged(nameof(BallCount));
+                    _modelClass.InitializeBalls(BallCount);
                 }
             }
         }
