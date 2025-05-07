@@ -4,10 +4,10 @@ using ViewModel;
 namespace View;
 public partial class App : Application
 {
-    private void OnStartup(object sender, StartupEventArgs e)
+    private async void OnStartup(object sender, StartupEventArgs e)
     {
         ViewModelClass viewModel = new ViewModelClass(10);
-        viewModel.StartSimulation();
+        await viewModel.StartSimulation();
         
         MainWindow mainWindow = new MainWindow
         {

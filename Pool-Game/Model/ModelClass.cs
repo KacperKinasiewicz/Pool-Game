@@ -1,4 +1,5 @@
-﻿using Logic;
+﻿using System.Threading.Tasks;
+using Logic;
 
 namespace Model
 {
@@ -10,17 +11,16 @@ namespace Model
         public ModelClass(double width, double height)
         {
             _table = new Table(width, height);
-            
         }
         
-        public void InitializeBalls(int ballCount)
+        public async Task InitializeBalls(int ballCount)
         {
-            _table.InitializeBalls(ballCount);
+            await _table.CreateBalls(ballCount);
         }
 
         public void UpdateBalls()
         {
-            _table.UpdateBalls();
+            _table.UpdateSimulationStep();
         }
     }
 }

@@ -5,12 +5,14 @@ namespace Data
     public interface IBall : INotifyPropertyChanged
     {
         int Id { get; }
-        double X { get; set; }
-        double Y { get; set; }
+        double X { get; }
+        double Y { get; }
+        double Radius { get; }
+        double Mass { get; }
+
         double VelocityX { get; set; }
         double VelocityY { get; set; }
-        double Radius { get; }
 
-        event PropertyChangedEventHandler PropertyChanged;
+        void Move(double timeStep);
     }
 }

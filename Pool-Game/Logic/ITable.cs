@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using Data;
 
 namespace Logic
@@ -8,10 +9,8 @@ namespace Logic
         double Width { get; }
         double Height { get; }
         ObservableCollection<IBall> Balls { get; }
-
-        void InitializeBalls(int count);
-        void UpdateBalls();
-        void AddBall(IBall ball);
-        void RemoveBall(IBall ball);
+        
+        Task CreateBalls(int count, double defaultRadius = 10, double defaultMass = 10);
+        void UpdateSimulationStep();
     }
 }

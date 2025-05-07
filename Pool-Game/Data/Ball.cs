@@ -1,88 +1,129 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace Data
 {
-    public class Ball : IBall, INotifyPropertyChanged
+    public class Ball : IBall
     {
-        private int id;
-        private double x;
-        private double y;
-        private double velocityX;
-        private double velocityY;
-        private double radius;
+        private readonly int _id;
+        private double _x;
+        private double _y;
+        private double _velocityX;
+        private double _velocityY;
+        private readonly double _radius;
+        private readonly double _mass;
+        private readonly object _lock = new object();
 
-        public int Id => id;
-        public double Radius => radius;
+        public event PropertyChangedEventHandler PropertyChanged;
 
-        public Ball(int id, double x, double y, double velocityX, double velocityY, double radius)
-        {
-            if (radius <= 0)
-                throw new ArgumentException("Promień musi być większy od zera!", nameof(radius));
-            
-            this.id = id;
-            this.x = x;
-            this.y = y;
-            this.velocityX = velocityX;
-            this.velocityY = velocityY;
-            this.radius = radius;
-        }
-        
+        public int Id => _id;
+
         public double X
         {
-            get => x;
+            get { lock (_lock) { return _x; } }
             set
             {
-                if (x != value)
+                bool changed = false;
+                lock (_lock)
                 {
-                    x = value;
-                    OnPropertyChanged(nameof(X));
+                    if (_x != value)
+                    {
+                        _x = value;
+                        changed = true;
+                    }
                 }
+                if (changed) { OnPropertyChanged(); }
             }
         }
 
         public double Y
         {
-            get => y;
+            get { lock (_lock) { return _y; } }
             set
             {
-                if (y != value)
+                bool changed = false;
+                lock (_lock)
                 {
-                    y = value;
-                    OnPropertyChanged(nameof(Y));
+                    if (_y != value)
+                    {
+                        _y = value;
+                        changed = true;
+                    }
                 }
+                if (changed) { OnPropertyChanged(); }
             }
         }
 
+        public double Radius => _radius;
+        public double Mass => _mass;
+
         public double VelocityX
         {
-            get => velocityX;
+            get { lock (_lock) { return _velocityX; } }
             set
             {
-                if (velocityX != value)
+                bool changed = false;
+                lock (_lock)
                 {
-                    velocityX = value;
-                    OnPropertyChanged(nameof(VelocityX));
+                    if (_velocityX != value)
+                    {
+                        _velocityX = value;
+                        changed = true;
+                    }
                 }
+                if (changed) { OnPropertyChanged(); }
             }
         }
 
         public double VelocityY
         {
-            get => velocityY;
+            get { lock (_lock) { return _velocityY; } }
             set
             {
-                if (velocityY != value)
+                bool changed = false;
+                lock (_lock)
                 {
-                    velocityY = value;
-                    OnPropertyChanged(nameof(VelocityY));
+                    if (_velocityY != value)
+                    {
+                        _velocityY = value;
+                        changed = true;
+                    }
                 }
+                if (changed) { OnPropertyChanged(); }
             }
         }
-        
-        public event PropertyChangedEventHandler PropertyChanged;
 
-        protected virtual void OnPropertyChanged(string propertyName)
+        public Ball(int id, double x, double y, double radius, double mass, double velocityX, double velocityY)
+        {
+            if (radius <= 0) { throw new ArgumentOutOfRangeException(nameof(radius), "Promień musi być większy od zera!"); }
+            if (mass <= 0) { throw new ArgumentOutOfRangeException(nameof(mass), "Masa musi być większa od zera!"); }
+
+            _id = id;
+            _x = x;
+            _y = y;
+            _radius = radius;
+            _mass = mass;
+            _velocityX = velocityX;
+            _velocityY = velocityY;
+        }
+
+        public void Move(double timeStep)
+        {
+            double newX;
+            double newY;
+
+            lock (_lock)
+            {
+                newX = _x + _velocityX * timeStep;
+                newY = _y + _velocityY * timeStep;
+            }
+            
+            X = newX;
+            Y = newY;
+        }
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

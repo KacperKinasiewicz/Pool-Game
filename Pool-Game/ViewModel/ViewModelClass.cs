@@ -1,5 +1,7 @@
-﻿using System.ComponentModel;
-using System.Timers;
+﻿using System;
+using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using Model;
 
 namespace ViewModel
@@ -7,18 +9,15 @@ namespace ViewModel
     public class ViewModelClass : INotifyPropertyChanged
     {
         private int _ballCount = 10;
-        private readonly Timer _timer;
+        private CancellationTokenSource _simulationCts;
+        private Task _simulationTask;
         private readonly ModelClass _modelClass;
         public ModelClass ModelClass => _modelClass;
         
-        public ViewModelClass(int ballCount)
+        public ViewModelClass(int initialBallCount = 10)
         {
             _modelClass = new ModelClass(800, 600);
-            this.BallCount = ballCount;
-            
-            _timer = new Timer(16);
-            _timer.Elapsed += Timer_Elapsed;
-            _timer.AutoReset = true;
+            BallCount = initialBallCount; 
         }
         
         public int BallCount
@@ -30,20 +29,53 @@ namespace ViewModel
                 {
                     _ballCount = value;
                     OnPropertyChanged(nameof(BallCount));
-                    _modelClass.InitializeBalls(BallCount);
+                    _ = InitializeBalls(_ballCount);
                 }
             }
         }
         
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        private async Task InitializeBalls(int count)
         {
-            UpdateSimulation();
+            await _modelClass.InitializeBalls(count);
         }
+
         
-        public void StartSimulation()
+        public async Task StartSimulation()
         {
-            _modelClass.InitializeBalls(BallCount);
-            _timer.Start();
+            if (_simulationTask != null && !_simulationTask.IsCompleted)
+            {
+                _simulationCts.Cancel();
+                try
+                {
+                    await _simulationTask;
+                }
+                catch (OperationCanceledException) { }
+                finally
+                {
+                    _simulationCts?.Dispose();
+                }
+            }
+
+            await InitializeBalls(BallCount);
+
+            _simulationCts = new CancellationTokenSource();
+            CancellationToken token = _simulationCts.Token;
+
+            _simulationTask = Task.Run(async () =>
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    UpdateSimulation();
+                    try
+                    {
+                        await Task.Delay(16, token); 
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        break;
+                    }
+                }
+            }, token);
         }
         
         public void UpdateSimulation()
@@ -53,7 +85,7 @@ namespace ViewModel
         
         public void StopSimulation()
         {
-            _timer.Stop();
+            _simulationCts?.Cancel();
         }
         
         public event PropertyChangedEventHandler PropertyChanged;

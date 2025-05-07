@@ -7,15 +7,19 @@
         mc:Ignorable="d"
         Title="Bilard" Height="800" Width="1000">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0*"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        
-            
-        <Canvas Name="GameCanvas" Width="800" Height="600">
+
+
+        <Canvas Name="GameCanvas" Width="800" Height="600" Grid.ColumnSpan="2" Margin="100,60,100,60">
             <Rectangle Width="810" Height="610" Stroke="Brown" StrokeThickness="10" Fill="Green"/>
-            
+
             <ItemsControl ItemsSource="{Binding ModelClass.Table.Balls}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -35,8 +39,8 @@
                 </ItemsControl.ItemContainerStyle>
             </ItemsControl>
         </Canvas>
-        
-        <StackPanel Grid.Row="1" Margin="10">
+
+        <StackPanel Grid.Row="1" Margin="10,10,10,10" Grid.ColumnSpan="2">
             <TextBlock Text="Zmień liczbę kulek na stole:" 
                        FontSize="16" 
                        Margin="0,0,0,5"/>
