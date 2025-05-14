@@ -11,7 +11,7 @@ namespace Test
             double x = 10.0;
             double y = 15.0;
             double radius = 5.0;
-            double mass = 2.0;
+            double mass = 3.0;
             double velocityX = 1.0;
             double velocityY = -1.0;
             
