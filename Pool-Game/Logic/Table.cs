@@ -17,6 +17,7 @@ namespace Logic
 
         private readonly Random _random = new Random();
         private readonly object _ballsLock = new object();
+        private readonly ILogger _logger;
 
         private const double TimeStep = 0.1;
 
@@ -26,6 +27,7 @@ namespace Logic
             if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height), "Wysokość musi być dodatnia.");
             Width = width;
             Height = height;
+            _logger = new FileLogger("../../../../table_internal_log.json", 100);
         }
         
         public async Task CreateBalls(int count, double defaultRadius = 10, double defaultMass = 10)
@@ -51,7 +53,7 @@ namespace Logic
                         double velocityX = (_random.NextDouble() * 100) - 50;
                         double velocityY = (_random.NextDouble() * 100) - 50;
 
-                        newBall = new Ball(i, x, y, defaultRadius, defaultMass, velocityX, velocityY);
+                        newBall = new Ball(i, x, y, defaultRadius, defaultMass, velocityX, velocityY, _logger);
 
                         bool overlapsWithExisting = false;
                         foreach (var existingBall in localBallsList)
@@ -91,26 +93,27 @@ namespace Logic
         public void UpdateSimulationStep()
         {
             var currentBallsSnapshot = new List<IBall>();
-            lock(_ballsLock)
-            {
-                currentBallsSnapshot = _balls.ToList();
-            }
+            currentBallsSnapshot = _balls.ToList();
 
             foreach (var ball in currentBallsSnapshot)
             {
                 ball.Move(TimeStep);
             }
-            
-            foreach (var ball in currentBallsSnapshot)
-            {
-                HandleWallCollision(ball);
-            }
 
-            for (int i = 0; i < currentBallsSnapshot.Count; i++)
+            lock (_ballsLock)
             {
-                for (int j = i + 1; j < currentBallsSnapshot.Count; j++)
+                foreach (var ball in currentBallsSnapshot)
                 {
-                    HandleBallPairCollision(currentBallsSnapshot[i], currentBallsSnapshot[j]);
+                    HandleWallCollision(ball);
+                }
+
+                for (int i = 0; i < currentBallsSnapshot.Count; i++)
+                {
+                    for (int j = i + 1; j < currentBallsSnapshot.Count; j++)
+                    {
+                        HandleBallPairCollision(currentBallsSnapshot[i], currentBallsSnapshot[j]);
+
+                    }
                 }
             }
         }

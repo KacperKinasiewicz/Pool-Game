@@ -13,7 +13,7 @@ namespace Data
         private double _velocityY;
         private readonly double _radius;
         private readonly double _mass;
-        private readonly object _lock = new object();
+        private readonly ILogger _logger;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -21,37 +21,27 @@ namespace Data
 
         public double X
         {
-            get { lock (_lock) { return _x; } }
-            set
+            get { return _x; }
+            private set
             {
-                bool changed = false;
-                lock (_lock)
+                if (_x != value)
                 {
-                    if (_x != value)
-                    {
-                        _x = value;
-                        changed = true;
-                    }
+                    _x = value;
+                    OnPropertyChanged();
                 }
-                if (changed) { OnPropertyChanged(); }
             }
         }
 
         public double Y
         {
-            get { lock (_lock) { return _y; } }
-            set
+            get { return _y; }
+            private set
             {
-                bool changed = false;
-                lock (_lock)
+                if (_y != value)
                 {
-                    if (_y != value)
-                    {
-                        _y = value;
-                        changed = true;
-                    }
+                    _y = value;
+                    OnPropertyChanged();
                 }
-                if (changed) { OnPropertyChanged(); }
             }
         }
 
@@ -60,41 +50,31 @@ namespace Data
 
         public double VelocityX
         {
-            get { lock (_lock) { return _velocityX; } }
+            get { return _velocityX; }
             set
             {
-                bool changed = false;
-                lock (_lock)
+                if (_velocityX != value)
                 {
-                    if (_velocityX != value)
-                    {
-                        _velocityX = value;
-                        changed = true;
-                    }
+                    _velocityX = value;
+                    OnPropertyChanged();
                 }
-                if (changed) { OnPropertyChanged(); }
             }
         }
 
         public double VelocityY
         {
-            get { lock (_lock) { return _velocityY; } }
+            get { return _velocityY; }
             set
             {
-                bool changed = false;
-                lock (_lock)
+                if (_velocityY != value)
                 {
-                    if (_velocityY != value)
-                    {
-                        _velocityY = value;
-                        changed = true;
-                    }
+                    _velocityY = value;
+                    OnPropertyChanged();
                 }
-                if (changed) { OnPropertyChanged(); }
             }
         }
 
-        public Ball(int id, double x, double y, double radius, double mass, double velocityX, double velocityY)
+        public Ball(int id, double x, double y, double radius, double mass, double velocityX, double velocityY, ILogger logger)
         {
             if (radius <= 0) { throw new ArgumentOutOfRangeException(nameof(radius), "Promień musi być większy od zera!"); }
             if (mass <= 0) { throw new ArgumentOutOfRangeException(nameof(mass), "Masa musi być większa od zera!"); }
@@ -106,21 +86,23 @@ namespace Data
             _mass = mass;
             _velocityX = velocityX;
             _velocityY = velocityY;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger), "Logger nie może być null.");
         }
 
-        public void Move(double timeStep)
+        public void Move(double elapsedTime)
         {
+            if (elapsedTime <= 0) return;
+
             double newX;
             double newY;
 
-            lock (_lock)
-            {
-                newX = _x + _velocityX * timeStep;
-                newY = _y + _velocityY * timeStep;
-            }
+            newX = _x + _velocityX * elapsedTime;
+            newY = _y + _velocityY * elapsedTime;
             
             X = newX;
             Y = newY;
+
+            _logger.LogBallState(this, DateTime.UtcNow);
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
