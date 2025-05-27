@@ -23,11 +23,11 @@ namespace Logic
 
         public Table(double width, double height)
         {
-            if (width <= 0) throw new ArgumentOutOfRangeException(nameof(width), "Szerokość musi być dodatnia.");
-            if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height), "Wysokość musi być dodatnia.");
+            if (width <= 0) throw new ArgumentOutOfRangeException(nameof(width), "Szerokość stołu musi być dodatnia.");
+            if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height), "Wysokość stołu musi być dodatnia.");
             Width = width;
             Height = height;
-            _logger = new FileLogger("../../../../table_internal_log.json", 100);
+            _logger = new FileLogger(); 
         }
         
         public async Task CreateBalls(int count, double defaultRadius = 10, double defaultMass = 10)
@@ -41,41 +41,13 @@ namespace Logic
                 var localBallsList = new List<IBall>();
                 for (int i = 0; i < count; i++)
                 {
-                    bool placedSuccessfully = false;
-                    IBall newBall = null;
-                    int placementAttempts = 0;
-                    const int maxPlacementAttempts = 100;
+                    double x = _random.NextDouble() * (Width - 2 * defaultRadius) + defaultRadius;
+                    double y = _random.NextDouble() * (Height - 2 * defaultRadius) + defaultRadius;
+                    double velocityX = (_random.NextDouble() * 100) - 50; 
+                    double velocityY = (_random.NextDouble() * 100) - 50;
 
-                    while (!placedSuccessfully && placementAttempts < maxPlacementAttempts)
-                    {
-                        double x = _random.NextDouble() * (Width - 2 * defaultRadius) + defaultRadius;
-                        double y = _random.NextDouble() * (Height - 2 * defaultRadius) + defaultRadius;
-                        double velocityX = (_random.NextDouble() * 100) - 50;
-                        double velocityY = (_random.NextDouble() * 100) - 50;
-
-                        newBall = new Ball(i, x, y, defaultRadius, defaultMass, velocityX, velocityY, _logger);
-
-                        bool overlapsWithExisting = false;
-                        foreach (var existingBall in localBallsList)
-                        {
-                            double dxCheck = existingBall.X - newBall.X;
-                            double dyCheck = existingBall.Y - newBall.Y;
-                            double distanceSquaredCheck = dxCheck * dxCheck + dyCheck * dyCheck;
-                            double sumRadii = existingBall.Radius + newBall.Radius;
-                            if (distanceSquaredCheck < sumRadii * sumRadii)
-                            {
-                                overlapsWithExisting = true;
-                                break;
-                            }
-                        }
-
-                        if (!overlapsWithExisting)
-                        {
-                            localBallsList.Add(newBall);
-                            placedSuccessfully = true;
-                        }
-                        placementAttempts++;
-                    }
+                    IBall newBall = new Ball(i, x, y, defaultRadius, defaultMass, velocityX, velocityY, _logger);
+                    localBallsList.Add(newBall);
                 }
                 return localBallsList;
             });
@@ -92,8 +64,11 @@ namespace Logic
 
         public void UpdateSimulationStep()
         {
-            var currentBallsSnapshot = new List<IBall>();
-            currentBallsSnapshot = _balls.ToList();
+            List<IBall> currentBallsSnapshot;
+            lock (_ballsLock)
+            {
+                currentBallsSnapshot = _balls.ToList();
+            }
 
             foreach (var ball in currentBallsSnapshot)
             {
@@ -112,7 +87,6 @@ namespace Logic
                     for (int j = i + 1; j < currentBallsSnapshot.Count; j++)
                     {
                         HandleBallPairCollision(currentBallsSnapshot[i], currentBallsSnapshot[j]);
-
                     }
                 }
             }
@@ -120,22 +94,22 @@ namespace Logic
 
         private void HandleWallCollision(IBall ball)
         {
-            if (ball.X - ball.Radius < 0)
+            if (ball.X - ball.Radius < 0 && ball.VelocityX < 0)
             {
-                ball.VelocityX = Math.Abs(ball.VelocityX);
+                ball.VelocityX = -ball.VelocityX;
             }
-            else if (ball.X + (2 * ball.Radius) > Width)
+            else if (ball.X + ball.Radius > Width && ball.VelocityX > 0)
             {
-                ball.VelocityX = -Math.Abs(ball.VelocityX);
+                ball.VelocityX = -ball.VelocityX;
             }
 
-            if (ball.Y - ball.Radius < 0)
+            if (ball.Y - ball.Radius < 0 && ball.VelocityY < 0)
             {
-                ball.VelocityY = Math.Abs(ball.VelocityY);
+                ball.VelocityY = -ball.VelocityY;
             }
-            else if (ball.Y + (2 * ball.Radius) > Height)
+            else if (ball.Y + ball.Radius > Height && ball.VelocityY > 0)
             {
-                ball.VelocityY = -Math.Abs(ball.VelocityY);
+                ball.VelocityY = -ball.VelocityY;
             }
         }
 
@@ -149,29 +123,36 @@ namespace Logic
             if (distanceSquared <= sumRadii * sumRadii && distanceSquared > 0)
             {
                 double distance = Math.Sqrt(distanceSquared);
+                
+                double relativeVelocityX = ball2.VelocityX - ball1.VelocityX;
+                double relativeVelocityY = ball2.VelocityY - ball1.VelocityY;
+                double dotProduct = dx * relativeVelocityX + dy * relativeVelocityY;
 
-                double nx = dx / distance;
-                double ny = dy / distance;
+                if (dotProduct < 0)
+                {
+                    double nx = dx / distance;
+                    double ny = dy / distance;
 
-                double tx = -ny;
-                double ty = nx;
+                    double tx = -ny;
+                    double ty = nx;
 
-                double dpTan1 = ball1.VelocityX * tx + ball1.VelocityY * ty;
-                double dpTan2 = ball2.VelocityX * tx + ball2.VelocityY * ty;
+                    double dpTan1 = ball1.VelocityX * tx + ball1.VelocityY * ty;
+                    double dpTan2 = ball2.VelocityX * tx + ball2.VelocityY * ty;
 
-                double dpNorm1 = ball1.VelocityX * nx + ball1.VelocityY * ny;
-                double dpNorm2 = ball2.VelocityX * nx + ball2.VelocityY * ny;
+                    double dpNorm1 = ball1.VelocityX * nx + ball1.VelocityY * ny;
+                    double dpNorm2 = ball2.VelocityX * nx + ball2.VelocityY * ny;
 
-                double m1 = ball1.Mass;
-                double m2 = ball2.Mass;
+                    double m1 = ball1.Mass;
+                    double m2 = ball2.Mass;
 
-                double newDpNorm1 = (dpNorm1 * (m1 - m2) + 2 * m2 * dpNorm2) / (m1 + m2);
-                double newDpNorm2 = (dpNorm2 * (m2 - m1) + 2 * m1 * dpNorm1) / (m1 + m2);
+                    double newDpNorm1 = (dpNorm1 * (m1 - m2) + 2 * m2 * dpNorm2) / (m1 + m2);
+                    double newDpNorm2 = (dpNorm2 * (m2 - m1) + 2 * m1 * dpNorm1) / (m1 + m2);
 
-                ball1.VelocityX = tx * dpTan1 + nx * newDpNorm1;
-                ball1.VelocityY = ty * dpTan1 + ny * newDpNorm1;
-                ball2.VelocityX = tx * dpTan2 + nx * newDpNorm2;
-                ball2.VelocityY = ty * dpTan2 + ny * newDpNorm2;
+                    ball1.VelocityX = tx * dpTan1 + nx * newDpNorm1;
+                    ball1.VelocityY = ty * dpTan1 + ny * newDpNorm1;
+                    ball2.VelocityX = tx * dpTan2 + nx * newDpNorm2;
+                    ball2.VelocityY = ty * dpTan2 + ny * newDpNorm2;
+                }
             }
         }
     }

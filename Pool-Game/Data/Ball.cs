@@ -21,7 +21,7 @@ namespace Data
 
         public double X
         {
-            get { return _x; }
+            get => _x;
             private set
             {
                 if (_x != value)
@@ -34,7 +34,7 @@ namespace Data
 
         public double Y
         {
-            get { return _y; }
+            get => _y;
             private set
             {
                 if (_y != value)
@@ -50,7 +50,7 @@ namespace Data
 
         public double VelocityX
         {
-            get { return _velocityX; }
+            get => _velocityX;
             set
             {
                 if (_velocityX != value)
@@ -63,7 +63,7 @@ namespace Data
 
         public double VelocityY
         {
-            get { return _velocityY; }
+            get => _velocityY;
             set
             {
                 if (_velocityY != value)
@@ -93,14 +93,8 @@ namespace Data
         {
             if (elapsedTime <= 0) return;
 
-            double newX;
-            double newY;
-
-            newX = _x + _velocityX * elapsedTime;
-            newY = _y + _velocityY * elapsedTime;
-            
-            X = newX;
-            Y = newY;
+            X = _x + _velocityX * elapsedTime;
+            Y = _y + _velocityY * elapsedTime;
 
             _logger.LogBallState(this, DateTime.UtcNow);
         }

@@ -40,94 +40,83 @@ namespace Data
         private readonly BlockingCollection<BallToLogEntry> _logQueue;
         private readonly string _logFilePath;
         private readonly Task _loggingTask;
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellationTokenSource;
         
-        private bool _isOverCacheSize = false;
-        private readonly object _cacheLock = new object();
+        private const int InternalCacheSize = 100; 
+        private const string DefaultLogFilePath = "../../../../log.json";
 
-        private const int DefaultCacheSize = 200;
-
-        public FileLogger(string filePath = "./log.json", int cacheSize = DefaultCacheSize)
+        public FileLogger() 
         {
-            if (!Path.IsPathRooted(filePath))
+            if (!Path.IsPathRooted(DefaultLogFilePath))
             {
-                _logFilePath = Path.Combine(Directory.GetCurrentDirectory(), filePath);
+                _logFilePath = Path.Combine(Directory.GetCurrentDirectory(), DefaultLogFilePath);
             }
             else
             {
-                _logFilePath = filePath;
+                _logFilePath = DefaultLogFilePath;
             }
             
-            _logQueue = new BlockingCollection<BallToLogEntry>(new ConcurrentQueue<BallToLogEntry>(), cacheSize > 0 ? cacheSize : DefaultCacheSize);
+            _logQueue = new BlockingCollection<BallToLogEntry>(new ConcurrentQueue<BallToLogEntry>(), InternalCacheSize); 
+
+            _cancellationTokenSource = new CancellationTokenSource();
 
             try
             {
-                using (new StreamWriter(_logFilePath, false, Encoding.UTF8)) { }
+                string directoryPath = Path.GetDirectoryName(_logFilePath);
+                if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+                {
+                    Directory.CreateDirectory(directoryPath);
+                }
+
+                using (StreamWriter writer = new StreamWriter(_logFilePath, false, Encoding.UTF8)) { }
             }
             catch (IOException ex)
             {
                 Console.WriteLine($"Nie można zainicjalizować pliku logu: {_logFilePath}. Błąd: {ex.Message}");
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.WriteLine($"Brak uprawnień do utworzenia/zapisu pliku logu: {_logFilePath}. Błąd: {ex.Message}");
+            }
             
-            _loggingTask = Task.Run(ProcessQueue, _cancellationTokenSource.Token);
+            _loggingTask = Task.Run(() => ProcessQueue(_cancellationTokenSource.Token));
         }
 
         public void LogBallState(IBall ball, DateTime timestamp)
         {
             var logEntry = new BallToLogEntry(ball.Id, ball.X, ball.Y, ball.VelocityX, ball.VelocityY, timestamp);
-            bool addedSuccessfully = _logQueue.TryAdd(logEntry);
-
-            if (!addedSuccessfully)
-            {
-                lock (_cacheLock)
-                {
-                    _isOverCacheSize = true;
-                }
-            }
+            _logQueue.TryAdd(logEntry); 
         }
 
-        private async Task ProcessQueue()
+        private void ProcessQueue(CancellationToken token)
         {
             try
             {
                 using (StreamWriter streamWriter = new StreamWriter(_logFilePath, true, Encoding.UTF8))
                 {
-                    while (!_logQueue.IsCompleted)
+                    while (!_logQueue.IsCompleted || token.IsCancellationRequested)
                     {
-                        bool overflowOccurred = false;
-                        lock (_cacheLock)
-                        {
-                            if (_isOverCacheSize)
-                            {
-                                overflowOccurred = true;
-                                _isOverCacheSize = false;
-                            }
-                        }
+                        if (token.IsCancellationRequested) break;
 
-                        if (overflowOccurred)
-                        {
-                            await streamWriter.WriteLineAsync("Cache is over size. Some logs might have been lost.");
-                        }
-
-                        BallToLogEntry entryToLog = null;
+                        BallToLogEntry entryToLog;
                         try
                         {
-                            entryToLog = _logQueue.Take(_cancellationTokenSource.Token);
+                            entryToLog = _logQueue.Take(token);
                         }
                         catch (OperationCanceledException)
                         {
-                            break;
+                            break; 
                         }
                         catch (InvalidOperationException)
                         {
-                            break; 
+                            break;
                         }
 
                         if (entryToLog != null)
                         {
                             string jsonString = entryToLog.ToJsonString();
-                            await streamWriter.WriteLineAsync(jsonString);
-                            await streamWriter.FlushAsync();
+                            streamWriter.WriteLine(jsonString);
+                            streamWriter.Flush(); 
                         }
                     }
                 }
@@ -136,7 +125,11 @@ namespace Data
             {
                 Console.WriteLine($"Błąd zapisu do pliku logu w ProcessQueue: {ex.Message}");
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.WriteLine($"Brak uprawnień do zapisu do pliku logu w ProcessQueue: {_logFilePath}. Błąd: {ex.Message}");
+            }
+            catch (Exception ex) 
             {
                  Console.WriteLine($"Niespodziewany błąd w ProcessQueue: {ex.Message}");
             }
@@ -149,11 +142,14 @@ namespace Data
                 _logQueue.CompleteAdding();
             }
 
-            _cancellationTokenSource.Cancel();
+            if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
+            {
+                _cancellationTokenSource.Cancel();
+            }
 
             try
             {
-                _loggingTask?.Wait(TimeSpan.FromSeconds(5));
+                _loggingTask?.Wait(TimeSpan.FromSeconds(1)); 
             }
             catch (OperationCanceledException)
             {
@@ -164,8 +160,8 @@ namespace Data
             }
             finally
             {
-                _cancellationTokenSource.Dispose();
-                _logQueue.Dispose();
+                _cancellationTokenSource?.Dispose();
+                _logQueue?.Dispose();
             }
         }
     }
