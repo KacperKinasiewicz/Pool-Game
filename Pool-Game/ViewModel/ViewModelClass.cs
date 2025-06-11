@@ -14,7 +14,7 @@ namespace ViewModel
         private readonly ModelClass _modelClass;
         public ModelClass ModelClass => _modelClass;
         
-        public ViewModelClass(int initialBallCount = 10)
+        public ViewModelClass(int initialBallCount = 2)
         {
             _modelClass = new ModelClass(800, 600);
             BallCount = initialBallCount; 

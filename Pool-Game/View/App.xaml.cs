@@ -6,7 +6,7 @@ public partial class App : Application
 {
     private async void OnStartup(object sender, StartupEventArgs e)
     {
-        ViewModelClass viewModel = new ViewModelClass(10);
+        ViewModelClass viewModel = new ViewModelClass(2);
         await viewModel.StartSimulation();
         
         MainWindow mainWindow = new MainWindow

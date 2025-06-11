@@ -27,9 +27,9 @@ namespace Logic
             if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height), "Wysokość stołu musi być dodatnia.");
             Width = width;
             Height = height;
-            _logger = new FileLogger(); 
+            _logger = new FileLogger();
         }
-        
+
         public async Task CreateBalls(int count, double defaultRadius = 10, double defaultMass = 10)
         {
             if (count < 0) { throw new ArgumentOutOfRangeException(nameof(count), "Liczba kul nie może być ujemna."); }
@@ -43,10 +43,10 @@ namespace Logic
                 {
                     double x = _random.NextDouble() * (Width - 2 * defaultRadius) + defaultRadius;
                     double y = _random.NextDouble() * (Height - 2 * defaultRadius) + defaultRadius;
-                    double velocityX = (_random.NextDouble() * 100) - 50; 
+                    double velocityX = (_random.NextDouble() * 100) - 50;
                     double velocityY = (_random.NextDouble() * 100) - 50;
 
-                    IBall newBall = new Ball(i, x, y, defaultRadius, defaultMass, velocityX, velocityY, _logger);
+                    IBall newBall = new Ball(i, x, y, 10, defaultMass, velocityX, velocityY, _logger);
                     localBallsList.Add(newBall);
                 }
                 return localBallsList;
@@ -94,22 +94,15 @@ namespace Logic
 
         private void HandleWallCollision(IBall ball)
         {
-            if (ball.X - ball.Radius < 0 && ball.VelocityX < 0)
+            if ((ball.X - ball.Radius < 0 && ball.VelocityX < 0) ||
+                (ball.X + ball.Radius > Width && ball.VelocityX > 0) ||
+                (ball.Y - ball.Radius < 0 && ball.VelocityY < 0) ||
+                (ball.Y + ball.Radius > Height && ball.VelocityY > 0))
             {
-                ball.VelocityX = -ball.VelocityX;
-            }
-            else if (ball.X + ball.Radius > Width && ball.VelocityX > 0)
-            {
-                ball.VelocityX = -ball.VelocityX;
-            }
+                ball.VelocityX = (ball.X - ball.Radius < 0 || ball.X + ball.Radius > Width) ? -ball.VelocityX : ball.VelocityX;
+                ball.VelocityY = (ball.Y - ball.Radius < 0 || ball.Y + ball.Radius > Height) ? -ball.VelocityY : ball.VelocityY;
 
-            if (ball.Y - ball.Radius < 0 && ball.VelocityY < 0)
-            {
-                ball.VelocityY = -ball.VelocityY;
-            }
-            else if (ball.Y + ball.Radius > Height && ball.VelocityY > 0)
-            {
-                ball.VelocityY = -ball.VelocityY;
+                _logger.LogCollision(ball, DateTime.UtcNow);
             }
         }
 
@@ -123,7 +116,7 @@ namespace Logic
             if (distanceSquared <= sumRadii * sumRadii && distanceSquared > 0)
             {
                 double distance = Math.Sqrt(distanceSquared);
-                
+
                 double relativeVelocityX = ball2.VelocityX - ball1.VelocityX;
                 double relativeVelocityY = ball2.VelocityY - ball1.VelocityY;
                 double dotProduct = dx * relativeVelocityX + dy * relativeVelocityY;
@@ -152,6 +145,8 @@ namespace Logic
                     ball1.VelocityY = ty * dpTan1 + ny * newDpNorm1;
                     ball2.VelocityX = tx * dpTan2 + nx * newDpNorm2;
                     ball2.VelocityY = ty * dpTan2 + ny * newDpNorm2;
+
+                    _logger.LogCollision(ball1, ball2, DateTime.UtcNow);
                 }
             }
         }

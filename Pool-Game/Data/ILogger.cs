@@ -2,8 +2,9 @@
 
 namespace Data
 {
-    public interface ILogger : IDisposable
+    public interface ILogger
     {
-        void LogBallState(IBall ball, DateTime timestamp);
+        void LogCollision(IBall ball, DateTime time);
+        void LogCollision(IBall ball1, IBall ball2, DateTime time);
     }
 }

@@ -95,8 +95,6 @@ namespace Data
 
             X = _x + _velocityX * elapsedTime;
             Y = _y + _velocityY * elapsedTime;
-
-            _logger.LogBallState(this, DateTime.UtcNow);
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
